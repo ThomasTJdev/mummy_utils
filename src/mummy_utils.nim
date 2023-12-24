@@ -10,15 +10,21 @@ import
     cookies,
     json,
     strtabs,
-    strutils
+    strutils,
+    times
   ]
 
-export strtabs.hasKey
+# Set cookies (get string) and samsite enum
+export cookies.setCookie, cookies.SameSite
+
+# Access the `.params` with hasKey and pairs (loop)
+export strtabs.hasKey, strtabs.pairs
 
 # Exclude HttpHeaders since mummy exports webby's HttpHeaders
 import std/httpcore except HttpHeaders
 export httpcore
 
+# Import query decoder, and `[]` for HttpHeaders
 from webby import decodeQueryComponent, `[]`
 export `[]`
 
@@ -134,7 +140,7 @@ proc paramGenerator*(request: Request, details: Details): StringTableRef =
 
 
   # Path data: /project/@projectID/user/@fileID
-  if details.urlHasParams:
+  if details != nil and details.urlHasParams:
     let
       urlOrg  = details.urlOrg.split("/")
       uriMain = uriSplit[0].split("/")
@@ -250,9 +256,38 @@ proc cookies*(request: Request): StringTableRef =
   return parseCookies(request.headers["Cookie"])
 
 
-template addCookie*(cookie: string) =
+template addCookie*(
+    key, value: string,
+    domain = "", path = "", expires = "";
+    noName = false, secure = true, httpOnly = true,
+    maxAge = none(int),
+    sameSite = SameSite.Default
+  ) =
   ## Add cookie to response but requires the header to be available.
-  headers["Set-Cookie"] = cookie
+  headers["Set-Cookie"] = setCookie(
+    key, value,
+    domain, path, expires,
+    noName, secure, httpOnly,
+    maxAge, sameSite
+  )
+
+template addCookie*(
+    key, value: string,
+    expires: DateTime | Time,
+    domain = "", path = "",
+    noName = false, secure = true, httpOnly = true,
+    maxAge = none(int),
+    sameSite = SameSite.Default
+  ) =
+  ## Add cookie to response but requires the header to be available.
+  ## Expires is set to a DateTime or Time.
+  headers["Set-Cookie"] = setCookie(
+    key, value,
+    expires,
+    domain, path,
+    noName, secure, httpOnly,
+    maxAge, sameSite
+  )
 
 
 #
@@ -265,8 +300,12 @@ template params*(request: Request, s: string): string =
 
 
 template params*(request: Request): StringTableRef =
-  ## Get params of request.
-  paramGenerator(request, details)
+  ## Get params of request. If this is used at a location without the
+  ## `Details` object, then the named params will not be available.
+  when declared(details):
+    paramGenerator(request, details)
+  else:
+    paramGenerator(request, nil)
 
 
 template `@`*(s: string): untyped =
@@ -343,6 +382,13 @@ template resp*(
     body: string
   ) =
   request.respond(200, @[("Content-Type", $ContentType.Html)], body)
+  return
+
+
+template resp*(
+    httpStatus: HttpCode,
+  ) =
+  request.respond(httpStatus.ord, @[("Content-Type", $ContentType.Html)], "")
   return
 
 

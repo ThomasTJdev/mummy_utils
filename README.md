@@ -154,7 +154,29 @@ Get cookies of request.
 ## addCookie*
 
 ```nim
-template addCookie*(cookie: string) =
+template addCookie*(
+    key, value: string,
+    domain = "", path = "", expires = "";
+    noName = false, secure = true, httpOnly = true,
+    maxAge = none(int),
+    sameSite = SameSite.Default
+  ) =
+```
+
+Add cookie to response but requires the header to be available.
+
+
+## addCookie*
+
+```nim
+template addCookie*(
+    key, value: string,
+    expires: DateTime | Time,
+    domain = "", path = "",
+    noName = false, secure = true, httpOnly = true,
+    maxAge = none(int),
+    sameSite = SameSite.Default
+  ) =
 ```
 
 Add cookie to response but requires the header to be available.
@@ -207,6 +229,10 @@ Transform router with route and handler. Saving the original route and including
 
 ```nim
 template resp*(body: string) =
+```
+
+```nim
+template resp*(httpStatus: HttpCode) =
 ```
 
 

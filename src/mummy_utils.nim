@@ -248,7 +248,7 @@ template setHeader*(field, value: string) =
 #
 proc cookies*(request: Request, cookie: string): string =
   ## Get cookies of request.
-  return parseCookies(request.headers["Cookie"])[cookie]
+  return parseCookies(request.headers["Cookie"]).getOrDefault(cookie, "")
 
 
 proc cookies*(request: Request): StringTableRef =

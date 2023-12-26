@@ -1,3 +1,7 @@
 nimcache/
 nimblecache/
 htmldocs/
+
+test/*
+!test/config.nims
+!test/*.nim

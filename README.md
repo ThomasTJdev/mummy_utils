@@ -26,56 +26,9 @@ server.serve(Port(8080))
 ```
 
 
-# Code details
+# Request fields
 
-
-
-## ContentType*
-
-
-```nim
-  ContentType* = enum
-    Json = "application/json"
-    Text = "text/plain"
-    Html = "text/html; charset=utf-8"
-```
-
-
-## paramGeneratorValue*
-
-```nim
-proc paramGeneratorValue*(request: Request, backendRoute: string, s: string): string =
-  ## Backend route can contain @named_parameters.
-```
-
-Find and return single param from request.
-
-Param priority:
-1. URL path
-2. URL query
-3. body data.
-
-
-
-## paramGenerator*
-
-```nim
-proc paramGenerator*(request: Request, details: Details): StringTableRef =
-```
-
-Generate params from request and returns a table.
-
-Param priority:
-1. URL path
-2. URL query
-3. body data
-
-
-____
-
-## Request fields
-
-**Examples**
+## Examples
 
 ```nim
 Request* = object
@@ -163,7 +116,7 @@ proc secure*(request: Request): bool =
 
 # Headers
 
-**Examples**
+## Examples
 
 ```nim
 echo request.headers["Content-Type"]
@@ -187,7 +140,7 @@ Set header of response. Requires you to initialize the header first.
 
 # Cookies
 
-**Examples**
+## Examples
 
 ```nim
 echo request.cookies("glid")
@@ -244,7 +197,7 @@ Add cookie to response but requires the header to be available.
 
 # Params
 
-**Examples**
+## Examples
 
 ```nim
 echo request.params("projectID")
@@ -297,14 +250,30 @@ match in this order:
 is available.
 
 
+
+
+
 # Routes
+
+## Examples
+
+```nim
+var router: Router
+router.routerSet(HttpGet, "/project/@projectID/info", indexCustom)
+router.routerSet(HttpPost, "/project/@projectID/info", indexCustom)
+
+router.routerSet(HttpPost, "/project/@projectID/info",
+  proc(request: Request, details: Details) =
+    echo "projectID:  " & @"projectID"
+    echo "invoiceID:  " & @"invoiceID"
+    resp(Http200, "Hello, World!")
+)
+```
 
 ## routerSet*
 
 ```nim
 template routerSet*( ) =
-## router.routerSet(Get, "/project/@projectID/info", indexCustom)
-## router.routerSet(Post, "/project/@projectID/info", indexCustom)
 ```
 
 Transform router with route and handler. Saving the original route and including the `Details` in in the callback.
@@ -313,7 +282,7 @@ Transform router with route and handler. Saving the original route and including
 
 # Responses
 
-**Examples**
+## Examples
 
 ```nim
 resp("Hello, World!")
@@ -330,6 +299,19 @@ resp(Http200, ContentType.Json, %* {"message": "Hello, World!"})
 redirect("/project/123/info")
 redirect(Http301, "/project/123/info")
 ```
+
+
+
+## ContentType*
+
+
+```nim
+  ContentType* = enum
+    Json = "application/json"
+    Text = "text/plain"
+    Html = "text/html; charset=utf-8"
+```
+
 
 
 ## resp*() - string

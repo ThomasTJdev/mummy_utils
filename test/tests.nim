@@ -34,6 +34,9 @@ proc index(request: Request, details: Details) =
   echo request.cookies("_pk_id.ec72")
   echo ""
 
+  var headers: httpheaders.HttpHeaders
+  setCookie("test", "content")
+
   resp(Http200, "OK")
 
 proc indexJson(request: Request, details: Details) =

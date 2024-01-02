@@ -193,10 +193,10 @@ proc cookies*(request: Request): StringTableRef =
 Get cookies of request.
 
 
-## addCookie*
+## setCookie*
 
 ```nim
-template addCookie*(
+template setCookie*(
     key, value: string,
     domain = "", path = "", expires = "";
     noName = false, secure = true, httpOnly = true,
@@ -208,10 +208,10 @@ template addCookie*(
 Add cookie to response but requires the header to be available.
 
 
-## addCookie*
+## setCookie*
 
 ```nim
-template addCookie*(
+template setCookie*(
     key, value: string,
     expires: DateTime | Time,
     domain = "", path = "",

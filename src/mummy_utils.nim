@@ -16,7 +16,7 @@ import
   ]
 
 # Set cookies (get string) and samsite enum
-export cookies.setCookie, cookies.SameSite
+export cookies.SameSite
 
 # Access the `.params` with hasKey and pairs (loop)
 export strtabs.hasKey, strtabs.pairs
@@ -257,37 +257,38 @@ proc cookies*(request: Request): StringTableRef =
   return parseCookies(request.headers["Cookie"])
 
 
-template addCookie*(
+template setCookie*(
     key, value: string,
     domain = "", path = "", expires = "";
-    noName = false, secure = true, httpOnly = true,
+    noName = true, secure = true, httpOnly = true,
     maxAge = none(int),
     sameSite = SameSite.Default
   ) =
   ## Add cookie to response but requires the header to be available.
-  headers["Set-Cookie"] = setCookie(
+  headers["Set-Cookie"] = cookies.setCookie(
     key, value,
     domain, path, expires,
     noName, secure, httpOnly,
-    maxAge, sameSite
+    maxAge, sameSite,
   )
 
-template addCookie*(
+template setCookie*(
     key, value: string,
     expires: DateTime | Time,
     domain = "", path = "",
-    noName = false, secure = true, httpOnly = true,
+    noName = true, secure = true, httpOnly = true,
     maxAge = none(int),
     sameSite = SameSite.Default
   ) =
   ## Add cookie to response but requires the header to be available.
   ## Expires is set to a DateTime or Time.
-  headers["Set-Cookie"] = setCookie(
+  headers["Set-Cookie"] = cookies.setCookie(
     key, value,
     expires,
     domain, path,
     noName, secure, httpOnly,
-    maxAge, sameSite
+    maxAge, sameSite,
+    noName = true
   )
 
 

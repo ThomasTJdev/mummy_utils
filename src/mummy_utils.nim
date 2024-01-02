@@ -9,6 +9,7 @@ import
   std/[
     cookies,
     json,
+    mimetypes,
     strtabs,
     strutils,
     times
@@ -28,7 +29,7 @@ export httpcore
 from webby import decodeQueryComponent, `[]`
 export `[]`
 
-
+# !! Missing options isSome and get for multipart
 
 type
   Details* = ref object
@@ -435,6 +436,19 @@ template resp*(httpStatus: HttpCode, body: JsonNode) =
 
 template resp*(httpStatus: HttpCode, contentType: ContentType, body: JsonNode) =
   request.respond(httpStatus.ord, @[("Content-Type", $contentType)], $body)
+  return
+
+
+#
+# Send file
+#
+template sendFile*(path: string) =
+  let r = readFile(path)
+  when declared(headers):
+    setHeader("Content-Type", newMimetypes().getMimetype(path.split(".")[^1]))
+    request.respond(200, headers, r)
+  else:
+    request.respond(200, @[("Content-Type", newMimetypes().getMimetype(path.split(".")[^1]))], r)
   return
 
 

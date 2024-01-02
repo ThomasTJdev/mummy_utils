@@ -35,10 +35,9 @@ proc index(request: Request, details: Details) =
   echo ""
 
   var headers: httpheaders.HttpHeaders
-  setCookie("test", "content")
-
-  setCookie("test", "expire1", (getTime() + 2.hours))
-  setCookie("test", "expire2", $(getTime().utc + initTimeInterval(hours = 1)))
+  setCookie("test0", "content")
+  setCookie("test1", "expire1", (getTime() + 5.hours), domain = "localhost")
+  setCookie("test2", "expire2", expires = $(getTime().utc + initTimeInterval(hours = 1)))
 
   resp(Http200, "OK")
 

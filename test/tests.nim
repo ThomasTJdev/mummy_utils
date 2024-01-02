@@ -1,6 +1,6 @@
 import mummy, mummy/routers
 import src/mummy_utils
-import std/json
+import std/json, std/times
 
 proc index(request: Request, details: Details) =
   echo "Http Method:  " & $request.reqMethod
@@ -36,6 +36,9 @@ proc index(request: Request, details: Details) =
 
   var headers: httpheaders.HttpHeaders
   setCookie("test", "content")
+
+  setCookie("test", "expire1", (getTime() + 2.hours))
+  setCookie("test", "expire2", $(getTime().utc + initTimeInterval(hours = 1)))
 
   resp(Http200, "OK")
 

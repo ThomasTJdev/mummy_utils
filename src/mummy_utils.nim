@@ -260,7 +260,7 @@ proc cookies*(request: Request): StringTableRef =
 template setCookie*(
     key, value: string,
     domain = "", path = "", expires = "";
-    noName = true, secure = true, httpOnly = true,
+    secure = true, httpOnly = true,
     maxAge = none(int),
     sameSite = SameSite.Default
   ) =
@@ -268,15 +268,15 @@ template setCookie*(
   headers["Set-Cookie"] = cookies.setCookie(
     key, value,
     domain, path, expires,
-    noName, secure, httpOnly,
-    maxAge, sameSite,
+    true, secure, httpOnly,
+    maxAge, sameSite
   )
 
 template setCookie*(
     key, value: string,
     expires: DateTime | Time,
     domain = "", path = "",
-    noName = true, secure = true, httpOnly = true,
+    secure = true, httpOnly = true,
     maxAge = none(int),
     sameSite = SameSite.Default
   ) =
@@ -286,9 +286,9 @@ template setCookie*(
     key, value,
     expires,
     domain, path,
-    noName, secure, httpOnly,
-    maxAge, sameSite,
-    noName = true
+    true,
+    secure, httpOnly,
+    maxAge, sameSite
   )
 
 

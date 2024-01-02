@@ -1,6 +1,6 @@
 import mummy, mummy/routers
 import src/mummy_utils
-
+import std/json
 
 proc index(request: Request, details: Details) =
   echo "Http Method:  " & $request.reqMethod
@@ -36,10 +36,13 @@ proc index(request: Request, details: Details) =
 
   resp(Http200, "OK")
 
+proc indexJson(request: Request, details: Details) =
+  resp(%* {"message": "Hello, World!"})
 
 
 var router: Router
 router.routerSet(HttpGet, "/", index)
+router.routerSet(HttpGet, "/json", indexJson)
 
 
 #

@@ -26,6 +26,34 @@ server.serve(Port(8080))
 ```
 
 
+
+# Routes
+
+## Examples
+
+```nim
+var router: Router
+router.routerSet(HttpGet, "/project/@projectID/info", indexCustom)
+router.routerSet(HttpPost, "/project/@projectID/info", indexCustom)
+
+router.routerSet(HttpPost, "/project/@projectID/info",
+  proc(request: Request, details: Details) =
+    echo "projectID:  " & @"projectID"
+    echo "invoiceID:  " & @"invoiceID"
+    resp(Http200, "Hello, World!")
+)
+```
+
+## routerSet*
+
+```nim
+template routerSet*( ) =
+```
+
+Transform router with route and handler. Saving the original route and including the `Details` in in the callback.
+
+
+
 # Request fields
 
 ## Examples
@@ -121,6 +149,7 @@ proc secure*(request: Request): bool =
 ```nim
 echo request.headers["Content-Type"]
 echo request.headers["Content-Typexxx"] # returns empty string
+var headers: HttpHeaders
 setHeader("Content-Type", "text/plain")
 ```
 
@@ -252,34 +281,6 @@ is available.
 
 
 
-
-# Routes
-
-## Examples
-
-```nim
-var router: Router
-router.routerSet(HttpGet, "/project/@projectID/info", indexCustom)
-router.routerSet(HttpPost, "/project/@projectID/info", indexCustom)
-
-router.routerSet(HttpPost, "/project/@projectID/info",
-  proc(request: Request, details: Details) =
-    echo "projectID:  " & @"projectID"
-    echo "invoiceID:  " & @"invoiceID"
-    resp(Http200, "Hello, World!")
-)
-```
-
-## routerSet*
-
-```nim
-template routerSet*( ) =
-```
-
-Transform router with route and handler. Saving the original route and including the `Details` in in the callback.
-
-
-
 # Responses
 
 ## Examples
@@ -299,7 +300,21 @@ resp(Http200, ContentType.Json, %* {"message": "Hello, World!"})
 redirect("/project/123/info")
 redirect(Http301, "/project/123/info")
 ```
+```nim
+sendFile("images/logo.png")
+```
+```nim
+var headers: HttpHeaders
+setHeader("xauth", "1234567890")
+setHeader("Content-Type", "text/html")
+resp(Http200, headers, "Hello, World!")
 
+# or
+
+var headers: HttpHeaders
+setHeader("xauth", "1234567890")
+resp(Http200, "Hello, World!")
+```
 
 
 ## ContentType*
@@ -316,6 +331,7 @@ redirect(Http301, "/project/123/info")
 
 ## resp*() - string
 
+If the `headers` is declared, they will be used in the `resp()`.
 
 
 ```nim
@@ -360,6 +376,12 @@ template resp*(httpStatus: HttpCode, body: JsonNode) =
 template resp*(httpStatus: HttpCode, contentType: ContentType, body: JsonNode) =
 ```
 
+
+## sendFile*() -
+
+```nim
+template sendFile*(path: string) =
+```
 
 
 ## redirect*

@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.0.6"
+version       = "0.0.7"
 author        = "ThomasTJdev"
 description   = "Unofficial utility package for mummy thread server"
 license       = "MIT"

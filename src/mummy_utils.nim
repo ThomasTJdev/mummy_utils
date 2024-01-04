@@ -330,11 +330,11 @@ proc paramCallback(wrapped: CallbackHandler, details: Details): RequestHandler =
 #
 # Router transformer
 #
-template routerSet*(
+template routeSet*(
     router: Router,
     routeType: HttpMethod,
     route: string,
-    handler: proc(request: Request, details: Details)
+    handler: CallbackHandler
   ) =
   ## Transform router with route and handler.
   ## Saving the original route and including the `Details` in
@@ -356,7 +356,7 @@ template routerSet*(
 
   # Generating routes
   case routeType
-  of HttpHead, HttpGet, HttpDelete:
+  of HttpGet:
     router.get(
       "/" & rFinal.join("/"),
       handler.paramCallback(Details(
@@ -364,8 +364,48 @@ template routerSet*(
         urlHasParams: urlParams,
       ))
     )
-  of HttpPost, HttpPut:
+  of HttpDelete:
+    router.delete(
+      "/" & rFinal.join("/"),
+      handler.paramCallback(Details(
+        urlOrg: route,
+        urlHasParams: urlParams,
+      ))
+    )
+  of HttpHead:
+    router.head(
+      "/" & rFinal.join("/"),
+      handler.paramCallback(Details(
+        urlOrg: route,
+        urlHasParams: urlParams,
+      ))
+    )
+  of HttpPost:
     router.post(
+      "/" & rFinal.join("/"),
+      handler.paramCallback(Details(
+        urlOrg: route,
+        urlHasParams: urlParams,
+      ))
+    )
+  of HttpPut:
+    router.put(
+      "/" & rFinal.join("/"),
+      handler.paramCallback(Details(
+        urlOrg: route,
+        urlHasParams: urlParams,
+      ))
+    )
+  of HttpOptions:
+    router.options(
+      "/" & rFinal.join("/"),
+      handler.paramCallback(Details(
+        urlOrg: route,
+        urlHasParams: urlParams,
+      ))
+    )
+  of HttpPatch:
+    router.patch(
       "/" & rFinal.join("/"),
       handler.paramCallback(Details(
         urlOrg: route,

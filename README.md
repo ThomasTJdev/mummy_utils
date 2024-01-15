@@ -17,7 +17,7 @@ proc indexCustom(request: Request, details: Details) =
   resp(Http200, "Hello, World!")
 
 var router: Router
-router.routerSet(Get, "/project/@projectID/info", indexCustom)
+router.routeSet(Get, "/project/@projectID/info", indexCustom)
 
 let server = newServer(router)
 echo "Serving on http://localhost:8080"
@@ -33,10 +33,10 @@ server.serve(Port(8080))
 
 ```nim
 var router: Router
-router.routerSet(HttpGet, "/project/@projectID/info", indexCustom)
-router.routerSet(HttpPost, "/project/@projectID/info", indexCustom)
+router.routeSet(HttpGet, "/project/@projectID/info", indexCustom)
+router.routeSet(HttpPost, "/project/@projectID/info", indexCustom)
 
-router.routerSet(HttpPost, "/project/@projectID/info",
+router.routeSet(HttpPost, "/project/@projectID/info",
   proc(request: Request, details: Details) =
     echo "projectID:  " & @"projectID"
     echo "invoiceID:  " & @"invoiceID"
@@ -44,10 +44,10 @@ router.routerSet(HttpPost, "/project/@projectID/info",
 )
 ```
 
-## routerSet*
+## routeSet*
 
 ```nim
-template routerSet*( ) =
+template routeSet*( ) =
 ```
 
 Transform router with route and handler. Saving the original route and including the `Details` in in the callback.

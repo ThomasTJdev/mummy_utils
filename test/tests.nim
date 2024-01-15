@@ -46,8 +46,8 @@ proc indexJson(request: Request, details: Details) =
 
 
 var router: Router
-router.routerSet(HttpGet, "/", index)
-router.routerSet(HttpGet, "/json", indexJson)
+router.routeSet(HttpGet, "/", index)
+router.routeSet(HttpGet, "/json", indexJson)
 
 
 #

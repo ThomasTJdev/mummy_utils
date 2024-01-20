@@ -23,11 +23,11 @@ export strtabs.hasKey, strtabs.pairs
 
 # Exclude HttpHeaders since mummy exports webby's HttpHeaders
 import std/httpcore except HttpHeaders
-export httpcore
+export httpcore except HttpHeaders
 
 # Import query decoder, and `[]` for HttpHeaders
 from webby import decodeQueryComponent, `[]`
-export `[]`
+export `[]`, HttpHeaders
 
 # !! Missing options isSome and get for multipart
 

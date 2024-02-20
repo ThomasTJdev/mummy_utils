@@ -3,6 +3,12 @@ Unofficial utility package for mummy thread server. Various helper
 functions.
 
 
+## Change log
+* Version `> 0.1.0` requires `mummy` version `> 0.4.0` or higher.
+* Version `== 0.8.0` supports `mummy` version `> 0.3.6` or higher.
+
+## Examples
+
 ```nim
 import std/[json, options]
 
@@ -10,7 +16,7 @@ import mummy, mummy/routers
 import mummy_utils
 
 
-proc indexParams(request: Request, details: Details) =
+proc indexParams(request: Request) =
   # Named parameter from route URL
   echo "projectID:  " & @"projectID"
 
@@ -20,12 +26,12 @@ proc indexParams(request: Request, details: Details) =
   resp(Http200, %* {"message": "Hello, World!"})
 
 
-proc indexRedirect(request: Request, details: Details) =
+proc indexRedirect(request: Request) =
   redirect("/project/123/info")
   # redirect(Http301, "/project/123/info")
 
 
-proc indexHeaders(request: Request, details: Details) =
+proc indexHeaders(request: Request) =
   var headers: HttpHeaders
   if request.cookies("pass") == "1234567890":
     setHeader("xauth", "secret")
@@ -36,11 +42,11 @@ proc indexHeaders(request: Request, details: Details) =
   resp(Http200, headers, "<h1>Hello, World!</h1>")
 
 
-proc indexHead(request: Request, details: Details) =
+proc indexHead(request: Request) =
   resp Http200
 
 
-proc indexPost(request: Request, details: Details) =
+proc indexPost(request: Request) =
   let urlParam = @"projectID"
   if urlParam == "":
     resp(Http400, "Missing projectID")
@@ -50,11 +56,11 @@ proc indexPost(request: Request, details: Details) =
   resp(Http200, ContentType.Text, body["msg"].getStr())
 
 
-proc indexFile(request: Request, details: Details) =
+proc indexFile(request: Request) =
   sendFile("filepath/" & @"filename")
 
 
-proc indexMultipart(request: Request, details: Details) =
+proc indexMultipart(request: Request) =
   var file: string
   for entry in request.multipart:
     if entry.data.isSome and entry.name == "croppedImage":
@@ -67,13 +73,13 @@ proc indexMultipart(request: Request, details: Details) =
 
 
 var router: Router
-router.routeSet(HttpGet, "/project/@projectID/info", indexParams)
-router.routeSet(HttpGet, "/redirect", indexRedirect)
-router.routeSet(HttpGet, "/headers", indexHeaders)
-router.routeSet(HttpHead, "/headers", indexHead)
-router.routeSet(HttpPost, "/headers", indexPost)
-router.routeSet(HttpGet, "/file/@filename", indexFile)
-router.routeSet(HttpPost, "/multipart", indexMultipart)
+router.get("/project/@projectID/info", indexParams)
+router.get("/redirect", indexRedirect)
+router.get("/headers", indexHeaders)
+router.head("/headers", indexHead)
+router.post("/headers", indexPost)
+router.get("/file/@filename", indexFile)
+router.post("/multipart", indexMultipart)
 
 let server = newServer(router)
 echo "Serving on http://localhost:8080"
@@ -89,25 +95,16 @@ server.serve(Port(8080))
 
 ```nim
 var router: Router
-router.routeSet(HttpGet, "/project/@projectID/info", indexCustom)
-router.routeSet(HttpPost, "/project/@projectID/info", indexCustom)
+router.get("/project/@projectID/info", indexCustom)
+router.post("/project/@projectID/info", indexCustom)
 
-router.routeSet(HttpPost, "/project/@projectID/info",
-  proc(request: Request, details: Details) =
+router.post("/project/@projectID/info",
+  proc(request: Request) =
     echo "projectID:  " & @"projectID"
     echo "invoiceID:  " & @"invoiceID"
     resp(Http200, "Hello, World!")
 )
 ```
-
-## routeSet*
-
-```nim
-template routeSet*( ) =
-```
-
-Transform router with route and handler. Saving the original route and including the `Details` in in the callback.
-
 
 
 # Request fields
@@ -472,8 +469,8 @@ routes:
 **Mummy #1**
 ```nim
 var router: Router
-router.routeSet(HttpGet, "/project/@projectID/info",
-  proc(request: Request, details: Details) =
+router.get("/project/@projectID/info",
+  proc(request: Request) =
     echo "projectID:  " & @"projectID"
     resp "Hello, World!"
 )
@@ -481,10 +478,19 @@ router.routeSet(HttpGet, "/project/@projectID/info",
 
 **Mummy #2**
 ```nim
-proc indexCustom(request: Request, details: Details) =
+var router: Router
+router.get("/project/@projectID/info", proc(request: Request) =
+  echo "projectID:  " & @"projectID"
+  resp "Hello, World!"
+)
+```
+
+**Mummy #3**
+```nim
+proc indexCustom(request: Request) =
   echo "projectID:  " & @"projectID"
   resp "Hello, World!"
 
 var router: Router
-router.routeSet(HttpGet, "/project/@projectID/info", indexCustom)
+router.get("/project/@projectID/info", indexCustom)
 ```

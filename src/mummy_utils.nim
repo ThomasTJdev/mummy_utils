@@ -29,15 +29,8 @@ export httpcore except HttpHeaders
 from webby import decodeQueryComponent, `[]`
 export `[]`, HttpHeaders
 
-# !! Missing options isSome and get for multipart
 
 type
-  Details* = ref object
-    urlOrg*: string
-    urlHasParams*: bool
-
-  CallbackHandler* = proc(request: Request, details: Details) {.gcsafe.}
-
   ContentType* = enum
     Json = "application/json"
     Text = "text/plain"
@@ -47,7 +40,7 @@ type
 #
 # Param generator
 #
-proc paramGeneratorValue*(request: Request, backendRoute: string, s: string): string =
+proc paramGeneratorValue*(request: Request, s: string): string =
   ## Find and return single param from request.
   ##
   ## Starts in:
@@ -55,35 +48,17 @@ proc paramGeneratorValue*(request: Request, backendRoute: string, s: string): st
   ## - URL query
   ## - body data.
 
-  let uriSplit  = request.uri.split("?")
+  # 1. Path
+  result = request.pathParams[s]
+  if result != "":
+    return result
 
-  # Path data: /project/@projectID/user/@fileID
-  if "@" in backendRoute:
-    let
-      urlOrg  = backendRoute.split("/")
-      uriMain = uriSplit[0].split("/")
-    for i in 1..urlOrg.high:
-      if urlOrg[i][0] == '@' and urlOrg[i].len() > 1:
-        if urlOrg[i][1..^1] == s:
-          return uriMain[i]
+  # 2. Query
+  result = request.queryParams[s]
+  if result != "":
+    return result
 
-
-  # URL query: ?name=thomas
-  if uriSplit.len() > 1:
-    for pairStr in uriSplit[1].split("#")[0].split('&'):
-      let
-        pair = pairStr.split('=', 1)
-        kv =
-          if pair.len == 2:
-            (decodeQueryComponent(pair[0]), decodeQueryComponent(pair[1]))
-          else:
-            (decodeQueryComponent(pair[0]), "")
-
-      if kv[0] == s:
-        return kv[1]
-
-
-  # Body data: name=thomas
+  # 3. Body
   if "x-www-form-urlencoded" in request.headers["Content-Type"].toLowerAscii():
     for pairStr in request.body.split('&'):
       let
@@ -99,34 +74,18 @@ proc paramGeneratorValue*(request: Request, backendRoute: string, s: string): st
 
 
 
-proc paramGenerator*(request: Request, details: Details): StringTableRef =
+proc paramGenerator*(request: Request): StringTableRef =
   ## Generate params from request.
   ##
   ## Generates all params available in the request.
   ## Starts in:
-  ## - URI query
   ## - body data
+  ## - URI query
   ## - URI path
 
   result = newStringTable()
 
-  let uriSplit  = request.uri.split("?")
-
-  # URL query: ?name=thomas
-  if uriSplit.len() > 1:
-    for pairStr in uriSplit[1].split("#")[0].split('&'):
-      let
-        pair = pairStr.split('=', 1)
-        kv =
-          if pair.len == 2:
-            (decodeQueryComponent(pair[0]), decodeQueryComponent(pair[1]))
-          else:
-            (decodeQueryComponent(pair[0]), "")
-
-      result[kv[0]] = kv[1]
-
-
-  # Body data: name=thomas
+  # Body
   if "x-www-form-urlencoded" in request.headers["Content-Type"].toLowerAscii():
     for pairStr in request.body.split('&'):
       let
@@ -139,19 +98,13 @@ proc paramGenerator*(request: Request, details: Details): StringTableRef =
 
       result[kv[0]] = kv[1]
 
+  # Query
+  for p in request.queryParams:
+    result[p[0]] = p[1]
 
-  # Path data: /project/@projectID/user/@fileID
-  if details != nil and details.urlHasParams:
-    let
-      urlOrg  = details.urlOrg.split("/")
-      uriMain = uriSplit[0].split("/")
-    for i in 1..urlOrg.high:
-      if urlOrg[i][0] == '@' and urlOrg[i].len() > 1:
-        result[urlOrg[i][1..^1]] = uriMain[i]
-
-
-  return result
-
+  # Path
+  for p in request.pathParams:
+    result[p[0]] = p[1]
 
 
 #
@@ -295,125 +248,20 @@ template setCookie*(
 #
 # Param access
 #
+template params*(request: Request): StringTableRef =
+  paramGenerator(request)
+
+
 template params*(request: Request, s: string): string =
   ## Get params of request.
-  let d = paramGenerator(request, details)
-  d.getOrDefault(s, "")
-
-
-template params*(request: Request): StringTableRef =
-  ## Get params of request. If this is used at a location without the
-  ## `Details` object, then the named params will not be available.
-  when declared(details):
-    paramGenerator(request, details)
-  else:
-    paramGenerator(request, nil)
+  paramGeneratorValue(request, s)
 
 
 template `@`*(s: string): untyped =
   ## Get param.
-  paramGeneratorValue(request, details.urlOrg, s)
+  paramGeneratorValue(request, s)
 
 
-
-#
-# Callback for routes
-#
-proc paramCallback(wrapped: CallbackHandler, details: Details): RequestHandler =
-  ## Callback where the `Details` is being generated and params
-  ## are being made ready.
-  return proc(request: Request) =
-    wrapped(request, details)
-
-
-
-#
-# Router transformer
-#
-template routeSet*(
-    router: Router,
-    routeType: HttpMethod,
-    route: string,
-    handler: CallbackHandler
-  ) =
-  ## Transform router with route and handler.
-  ## Saving the original route and including the `Details` in
-  ## in the callback.
-
-  # Saving original route
-  var
-    rFinal: seq[string]
-    urlParams: bool = false
-  for r in route.split("#")[0].split("/"):
-    if r.len() == 0:
-      continue
-    # Got @-path, replace with *
-    elif r[0] == '@':
-      rFinal.add("*")
-      urlParams = true
-    else:
-      rFinal.add(r)
-
-  # Generating routes
-  case routeType
-  of HttpGet:
-    router.get(
-      "/" & rFinal.join("/"),
-      handler.paramCallback(Details(
-        urlOrg: route,
-        urlHasParams: urlParams,
-      ))
-    )
-  of HttpDelete:
-    router.delete(
-      "/" & rFinal.join("/"),
-      handler.paramCallback(Details(
-        urlOrg: route,
-        urlHasParams: urlParams,
-      ))
-    )
-  of HttpHead:
-    router.head(
-      "/" & rFinal.join("/"),
-      handler.paramCallback(Details(
-        urlOrg: route,
-        urlHasParams: urlParams,
-      ))
-    )
-  of HttpPost:
-    router.post(
-      "/" & rFinal.join("/"),
-      handler.paramCallback(Details(
-        urlOrg: route,
-        urlHasParams: urlParams,
-      ))
-    )
-  of HttpPut:
-    router.put(
-      "/" & rFinal.join("/"),
-      handler.paramCallback(Details(
-        urlOrg: route,
-        urlHasParams: urlParams,
-      ))
-    )
-  of HttpOptions:
-    router.options(
-      "/" & rFinal.join("/"),
-      handler.paramCallback(Details(
-        urlOrg: route,
-        urlHasParams: urlParams,
-      ))
-    )
-  of HttpPatch:
-    router.patch(
-      "/" & rFinal.join("/"),
-      handler.paramCallback(Details(
-        urlOrg: route,
-        urlHasParams: urlParams,
-      ))
-    )
-  else:
-    quit("Unknown route type: " & $routeType)
 
 
 

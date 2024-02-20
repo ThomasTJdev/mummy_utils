@@ -5,3 +5,5 @@ htmldocs/
 test/*
 !test/config.nims
 !test/*.nim
+!test/file
+!test/js_tester.js

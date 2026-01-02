@@ -1,5 +1,7 @@
 # Copyright Thomas T. Jarløv (TTJ) - ttj@ttj.dk
 
+{.push raises: [].}
+
 import
   mummy,
   mummy/routers,
@@ -60,17 +62,20 @@ proc paramGeneratorValue*(request: Request, s: string): string =
 
   # 3. Body
   if "x-www-form-urlencoded" in request.headers["Content-Type"].toLowerAscii():
-    for pairStr in request.body.split('&'):
-      let
-        pair = pairStr.split('=', 1)
-        kv =
-          if pair.len == 2:
-            (decodeQueryComponent(pair[0]), decodeQueryComponent(pair[1]))
-          else:
-            (decodeQueryComponent(pair[0]), "")
+    try:
+      for pairStr in request.body.split('&'):
+        let
+          pair = pairStr.split('=', 1)
+          kv =
+            if pair.len == 2:
+              (decodeQueryComponent(pair[0]), decodeQueryComponent(pair[1]))
+            else:
+              (decodeQueryComponent(pair[0]), "")
 
-      if kv[0] == s:
-        return kv[1]
+        if kv[0] == s:
+          return kv[1]
+    except CatchableError:
+      return ""
 
 
 
@@ -86,26 +91,28 @@ proc paramGenerator*(request: Request): StringTableRef =
   result = newStringTable()
 
   # Body
-  if "x-www-form-urlencoded" in request.headers["Content-Type"].toLowerAscii():
-    for pairStr in request.body.split('&'):
-      let
-        pair = pairStr.split('=', 1)
-        kv =
-          if pair.len == 2:
-            (decodeQueryComponent(pair[0]), decodeQueryComponent(pair[1]))
-          else:
-            (decodeQueryComponent(pair[0]), "")
+  try:
+    if "x-www-form-urlencoded" in request.headers["Content-Type"].toLowerAscii():
+      for pairStr in request.body.split('&'):
+        let
+          pair = pairStr.split('=', 1)
+          kv =
+            if pair.len == 2:
+              (decodeQueryComponent(pair[0]), decodeQueryComponent(pair[1]))
+            else:
+              (decodeQueryComponent(pair[0]), "")
 
-      result[kv[0]] = kv[1]
+        result[kv[0]] = kv[1]
 
-  # Query
-  for p in request.queryParams:
-    result[p[0]] = p[1]
+    # Query
+    for p in request.queryParams:
+      result[p[0]] = p[1]
 
-  # Path
-  for p in request.pathParams:
-    result[p[0]] = p[1]
-
+    # Path
+    for p in request.pathParams:
+      result[p[0]] = p[1]
+  except CatchableError:
+    return result
 
 #
 # Request fields
@@ -244,6 +251,38 @@ template setCookie*(
     maxAge, sameSite
   )
 
+template addCookie*(
+    key, value: string,
+    domain = "", path = "", expires = "";
+    secure = true, httpOnly = true,
+    maxAge = none(int),
+    sameSite = SameSite.Default
+  ) =
+  ## Add cookie to response but requires the header to be available.
+  headers.toBase.add(("Set-Cookie", cookies.setCookie(
+    key, value,
+    domain, path, expires,
+    true, secure, httpOnly,
+    maxAge, sameSite
+  )))
+
+template addCookie*(
+    key, value: string,
+    expires: DateTime | Time,
+    domain = "", path = "",
+    secure = true, httpOnly = true,
+    maxAge = none(int),
+    sameSite = SameSite.Default
+  ) =
+  ## Add cookie to response but requires the header to be available.
+  headers.toBase.add(("Set-Cookie", cookies.setCookie(
+    key, value,
+    expires,
+    domain, path,
+    true,
+    secure, httpOnly,
+    maxAge, sameSite
+  )))
 
 #
 # Param access

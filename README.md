@@ -258,13 +258,41 @@ template setCookie*(
   ) =
 ```
 
-Add cookie to response but requires the header to be available.
+Sets the cookie - will remove any other cookies with the same name.
 
 
 ## setCookie*
 
 ```nim
 template setCookie*(
+    key, value: string,
+    expires: DateTime | Time,
+    domain = "", path = "",
+    noName = false, secure = true, httpOnly = true,
+    maxAge = none(int),
+    sameSite = SameSite.Default
+  ) =
+```
+
+Sets the cookie - will remove any other cookies with the same name.
+
+## addCookie*
+```nim
+template addCookie*(
+    key, value: string,
+    domain = "", path = "", expires = "";
+    noName = false, secure = true, httpOnly = true,
+    maxAge = none(int),
+    sameSite = SameSite.Default
+  ) =
+```
+
+Add cookie to response but requires the header to be available.
+
+
+## addCookie*
+```nim
+template addCookie*(
     key, value: string,
     expires: DateTime | Time,
     domain = "", path = "",

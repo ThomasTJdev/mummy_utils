@@ -11,7 +11,7 @@ import
 
 from webby import decodeQueryComponent, `[]`
 
-template value*(s: string): string =
+template value(s: string): string =
   when defined(caseSensitiveParams):
     s
   else:

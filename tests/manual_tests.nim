@@ -8,7 +8,7 @@ proc index(request: Request) =
   echo "Path:         " & $request.path
   check($request.path == "/")
   echo "Query:        " & $request.query
-  check($request.query == "")
+  check($request.query != "")
   echo "Body:         " & $request.body
   check($request.body == "")
   echo "Host:         " & $request.host
@@ -31,9 +31,17 @@ proc index(request: Request) =
   echo ""
 
   echo "Params specific: projectID"
-  echo " - " & request.params("projectID")
-  echo " - " & @"projectID"
+  echo " - Uppercase ID: " & request.params("projectID")
+  echo " - Uppercase ID: " & @"projectID"
+  echo " - Lowercase ID: " & request.params("projectid")
+  echo " - Lowercase ID: " & @"projectid"
   echo ""
+  echo "paramPath(request, \"projectID\"):  " & paramPath(request, "projectID")
+  echo "paramPath(request, \"projectid\"):  " & paramPath(request, "projectid")
+  echo "paramQuery(request, \"projectID\"): " & paramQuery(request, "projectID")
+  echo "paramQuery(request, \"projectid\"): " & paramQuery(request, "projectid")
+  echo "paramBody(request, \"projectID\"):  " & paramBody(request, "projectID")
+  echo "paramBody(request, \"projectid\"):  " & paramBody(request, "projectid")
 
   echo "Cookies:"
   for k, v in request.cookies():
@@ -57,6 +65,7 @@ proc indexJson(request: Request) =
 
 var router: Router
 router.get("/", index)
+router.get("/@projectID/@userid", index)
 router.get("/json", indexJson)
 
 

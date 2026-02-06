@@ -4,6 +4,7 @@ functions.
 
 
 ## Change log
+* Version `>= 0.2.0` defaults to case insensitive params. Revert to case sensitive by defining `-d:caseSensitiveParams`.
 * Version `> 0.1.0` requires `mummy` version `> 0.4.0` or higher.
 * Version `== 0.8.0` supports `mummy` version `> 0.3.6` or higher.
 
@@ -22,6 +23,11 @@ proc indexParams(request: Request) =
 
   # URI query param passed with ?invoiceID=123
   echo "invoiceID:  " & @"invoiceID"
+
+  # Grab params
+  echo paramsPath(request, "projectId")
+  echo paramsQuery(request, "projectId")
+  echo paramsBody(request, "projectId")
 
   resp(Http200, %* {"message": "Hello, World!"})
 
@@ -322,21 +328,40 @@ echo p.hasKey("invoiceID")
 
 
 ```nim
-template params*(request: Request, s: string): string =
-```
-
-```nim
 template params*(request: Request): StringTableRef =
 ```
 
-Get params. Is initialized on each call.  Includes named route parameters. Returns the value on first
-match in this order:
+Returns all params as a StringTableRef.
+
+
+```nim
+template params*(request: Request, s: string): string =
+```
+
+Get params. Is initialized on each call.  Includes named route parameters. Returns the value on first match in this order:
 1. URI path
 2. URI query
 2. body data
 
-`URI path` names parameters are only available in main route `Details` callback
-is available.
+
+
+```nim
+template paramPath*(request: Request, s: string): string =
+```
+
+Get param from URI path.
+
+```nim
+template paramQuery*(request: Request, s: string): string =
+```
+
+Get param from URI query.
+
+```nim
+template paramBody*(request: Request, s: string): string =
+```
+
+Get param from body data (if Content-Type is `application/x-www-form-urlencoded`).
 
 
 ## `@`*
@@ -355,9 +380,6 @@ match in this order:
 1. URI path
 2. URI query
 2. body data
-
-`URI path` names parameters are only available in main route `Details` callback
-is available.
 
 
 

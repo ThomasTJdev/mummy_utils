@@ -28,91 +28,18 @@ import std/httpcore except HttpHeaders
 export httpcore except HttpHeaders
 
 # Import query decoder, and `[]` for HttpHeaders
-from webby import decodeQueryComponent, `[]`
+from webby import `[]`
 export `[]`, HttpHeaders
 
+import utils/param_utils
+export param_utils
 
-type
-  ContentType* = enum
-    Json = "application/json"
-    Text = "text/plain"
-    Html = "text/html; charset=utf-8"
+import utils/cookie_utils
+export cookie_utils
 
+import utils/resp_utils
+export resp_utils
 
-#
-# Param generator
-#
-proc paramGeneratorValue*(request: Request, s: string): string =
-  ## Find and return single param from request.
-  ##
-  ## Starts in:
-  ## - URL path
-  ## - URL query
-  ## - body data.
-
-  # 1. Path
-  result = request.pathParams[s]
-  if result != "":
-    return result
-
-  # 2. Query
-  result = request.queryParams[s]
-  if result != "":
-    return result
-
-  # 3. Body
-  if "x-www-form-urlencoded" in request.headers["Content-Type"].toLowerAscii():
-    try:
-      for pairStr in request.body.split('&'):
-        let
-          pair = pairStr.split('=', 1)
-          kv =
-            if pair.len == 2:
-              (decodeQueryComponent(pair[0]), decodeQueryComponent(pair[1]))
-            else:
-              (decodeQueryComponent(pair[0]), "")
-
-        if kv[0] == s:
-          return kv[1]
-    except CatchableError:
-      return ""
-
-
-
-proc paramGenerator*(request: Request): StringTableRef =
-  ## Generate params from request.
-  ##
-  ## Generates all params available in the request.
-  ## Starts in:
-  ## - body data
-  ## - URI query
-  ## - URI path
-
-  result = newStringTable()
-
-  # Body
-  try:
-    if "x-www-form-urlencoded" in request.headers["Content-Type"].toLowerAscii():
-      for pairStr in request.body.split('&'):
-        let
-          pair = pairStr.split('=', 1)
-          kv =
-            if pair.len == 2:
-              (decodeQueryComponent(pair[0]), decodeQueryComponent(pair[1]))
-            else:
-              (decodeQueryComponent(pair[0]), "")
-
-        result[kv[0]] = kv[1]
-
-    # Query
-    for p in request.queryParams:
-      result[p[0]] = p[1]
-
-    # Path
-    for p in request.pathParams:
-      result[p[0]] = p[1]
-  except CatchableError:
-    return result
 
 #
 # Request fields
@@ -120,6 +47,14 @@ proc paramGenerator*(request: Request): StringTableRef =
 proc body*(request: Request): string =
   ## Get body of request.
   return request.body
+
+
+proc bodyJson*(request: Request): JsonNode =
+  ## Get body as JsonNode.
+  try:
+    return parseJson(request.body)
+  except:
+    return newJNull()
 
 
 proc host*(request: Request): string =
@@ -205,193 +140,6 @@ template setHeader*(field, value: string) =
 
 
 #
-# Cookies
-#
-proc cookies*(request: Request, cookie: string): string =
-  ## Get cookies of request.
-  return parseCookies(request.headers["Cookie"]).getOrDefault(cookie, "")
-
-
-proc cookies*(request: Request): StringTableRef =
-  ## Get cookies of request.
-  return parseCookies(request.headers["Cookie"])
-
-
-template setCookie*(
-    key, value: string,
-    domain = "", path = "", expires = "";
-    secure = true, httpOnly = true,
-    maxAge = none(int),
-    sameSite = SameSite.Default
-  ) =
-  ## Add cookie to response but requires the header to be available.
-  headers["Set-Cookie"] = cookies.setCookie(
-    key, value,
-    domain, path, expires,
-    true, secure, httpOnly,
-    maxAge, sameSite
-  )
-
-template setCookie*(
-    key, value: string,
-    expires: DateTime | Time,
-    domain = "", path = "",
-    secure = true, httpOnly = true,
-    maxAge = none(int),
-    sameSite = SameSite.Default
-  ) =
-  ## Add cookie to response but requires the header to be available.
-  ## Expires is set to a DateTime or Time.
-  headers["Set-Cookie"] = cookies.setCookie(
-    key, value,
-    expires,
-    domain, path,
-    true,
-    secure, httpOnly,
-    maxAge, sameSite
-  )
-
-template addCookie*(
-    key, value: string,
-    domain = "", path = "", expires = "";
-    secure = true, httpOnly = true,
-    maxAge = none(int),
-    sameSite = SameSite.Default
-  ) =
-  ## Add cookie to response but requires the header to be available.
-  headers.toBase.add(("Set-Cookie", cookies.setCookie(
-    key, value,
-    domain, path, expires,
-    true, secure, httpOnly,
-    maxAge, sameSite
-  )))
-
-template addCookie*(
-    key, value: string,
-    expires: DateTime | Time,
-    domain = "", path = "",
-    secure = true, httpOnly = true,
-    maxAge = none(int),
-    sameSite = SameSite.Default
-  ) =
-  ## Add cookie to response but requires the header to be available.
-  headers.toBase.add(("Set-Cookie", cookies.setCookie(
-    key, value,
-    expires,
-    domain, path,
-    true,
-    secure, httpOnly,
-    maxAge, sameSite
-  )))
-
-#
-# Param access
-#
-template params*(request: Request): StringTableRef =
-  paramGenerator(request)
-
-
-template params*(request: Request, s: string): string =
-  ## Get params of request.
-  paramGeneratorValue(request, s)
-
-
-template `@`*(s: string): untyped =
-  ## Get param.
-  paramGeneratorValue(request, s)
-
-
-
-
-
-#
-# General response
-#
-template resp*(
-    httpStatus: HttpCode = Http200,
-    headers: HttpHeaders,
-    body: string
-  ) =
-  when defined(dev):
-    if headers["Content-Type"] == "":
-      echo "Warning: No Content-Type set in response, defaulting to " & $ContentType.Html
-
-  request.respond(httpStatus.ord, headers, body)
-  return
-
-
-template resp*(
-    body: string,
-    contentType = $ContentType.Html
-  ) =
-  ## Returns with text/html as default.
-  when declared(headers):
-    setHeader("Content-Type", $contentType)
-    request.respond(200, headers, body)
-  else:
-    request.respond(200, @[("Content-Type", contentType)], body)
-  return
-
-
-template resp*(
-    httpStatus: HttpCode,
-  ) =
-  ## Returns response code with empty headers and body.
-  request.respond(httpStatus.ord, emptyHttpHeaders(), "")
-  return
-
-
-template resp*(
-    httpStatus: HttpCode,
-    body: string
-  ) =
-  when declared(headers):
-    if not headers.contains("Content-Type"):
-      setHeader("Content-Type", $ContentType.Html)
-    request.respond(httpStatus.ord, headers, body)
-  else:
-    request.respond(httpStatus.ord, @[("Content-Type", $ContentType.Html)], body)
-  return
-
-
-template resp*(
-    httpStatus: HttpCode,
-    contentType: ContentType,
-    body: string
-  ) =
-  when declared(headers):
-    setHeader("Content-Type", $contentType)
-    request.respond(httpStatus.ord, headers, body)
-  else:
-    request.respond(httpStatus.ord, @[("Content-Type", $contentType)], body)
-  return
-
-
-
-#
-# Json response
-#
-template resp*(body: JsonNode) =
-  when declared(headers):
-    setHeader("Content-Type", $ContentType.Json)
-    request.respond(200, headers, $body)
-  else:
-    request.respond(200, @[("Content-Type", $ContentType.Json)], $body)
-  return
-
-
-template resp*(httpStatus: HttpCode, contentType: ContentType, body: JsonNode) =
-  request.respond(httpStatus.ord, @[("Content-Type", $contentType)], $body)
-  return
-
-
-template resp*(httpStatus: HttpCode, body: JsonNode) =
-  request.respond(httpStatus.ord, @[("Content-Type", $ContentType.Json)], $body)
-  return
-
-
-
-#
 # Send file
 #
 template sendFile*(path: string) =
@@ -403,30 +151,6 @@ template sendFile*(path: string) =
     request.respond(200, @[("Content-Type", newMimetypes().getMimetype(path.split(".")[^1]))], r)
   return
 
-
-#
-# Redirects
-#
-template redirect*(path: string) =
-  when declared(headers):
-    headers["Location"] = path
-    request.respond(303, headers)
-  else:
-    request.respond(303, @[("Location", path)])
-  return
-
-template redirect*(httpStatus: HttpCode, path: string) =
-  when declared(headers):
-    headers["Location"] = path
-    request.respond(httpStatus.ord, headers)
-  else:
-    request.respond(httpStatus.ord, @[("Location", path)])
-  return
-
-template redirect*(httpStatus: HttpCode, headers: HttpHeaders, path: string) =
-  headers["Location"] = path
-  request.respond(httpStatus.ord, headers)
-  return
 
 
 
